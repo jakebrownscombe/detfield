@@ -30,15 +30,10 @@ if (requireNamespace("magick", quietly = TRUE)) {
 
 **detfield** turns the detections of a fixed acoustic receiver array into hourly location
 surfaces: for each tagged animal and hour, the probability that the animal was in each water
-cell. Each surface is a Bayesian posterior over the water cells. Every listening receiver's
-count of the tag's transmissions in the hour is binomial in the expected number sent (the hour
-over the tag's mean delay, taken as known), with detection probability from your range model
-at the distance through water, and by default a receiver-hour spread when the model gives one.
-The likelihood is normalised over every water cell, a flat prior over water, and each hour is
-estimated on its own, with no movement model
-([the model](https://jakebrownscombe.github.io/detfield/articles/positioning.html#the-model)). It takes a range
-model you fitted, a depth raster of the water body, the receiver deployments, the detections
-and the tag delays, in the column names the positionR packages share.
+cell. It takes a range model you fitted, a depth raster of the water body, the receiver
+deployments, the detections and the tag delays, in the column names the positionR packages
+share. Each hour is estimated on its own, with no movement model
+([the model](https://jakebrownscombe.github.io/detfield/articles/positioning.html#the-model)).
 
 ## Install
 
@@ -77,14 +72,10 @@ plot(surface)
 ```
 
 *Location surface of `stoney-02` for 08:00 to 09:00 UTC on 1 June 2024, from its
-`r nrow(dets)` detections at `r sum(counts$y > 0)` receivers, on 100 m water cells. The surface
-keeps the smallest set of cells that holds 99.9% of the hour's probability; the water cells
-outside it are not stored.*
+`r nrow(dets)` detections at `r sum(counts$y > 0)` receivers, on 100 m water cells.*
 
 The 95% credible region of the hour holds
-`r nrow(credible_region(surface, level = 0.95))` water cells, and the most probable cell is
-`r round(attr(surface, "bins")$mode_dist_m)` m from the nearest receiver that heard the
-animal.
+`r nrow(credible_region(surface, level = 0.95))` water cells.
 
 ## Articles
 
@@ -119,11 +110,9 @@ range model and one lake for their examples, Stoney Lake.
 - [**arraydesign**](https://jakebrownscombe.github.io/arraydesign/): design and test the performance of tracking systems.
 - [**arraydesignR**](https://jakebrownscombe.github.io/arraydesignR/): **arraydesign** as a point-and-click application.
 
-**detqc** exports the same five figure functions as **detfield**: `theme_positionr()`,
-`scale_fill_probability()`, `scale_fill_depth()`, `annotation_scale_bar()` and
-`positionr_ring_colours()`. With both packages attached, R reports the later one's copies as
-masking the earlier one's. The copies are identical, so either works; attach one, or call them
-with `detfield::`. Every map in the suite draws a receiver in the three ring colours:
+**detqc** exports the same five figure functions as **detfield**. The copies are identical, so
+the masking message R prints when both packages are attached can be ignored. Every map in the
+suite draws a receiver in the three ring colours:
 
 ```{r ring-colours}
 positionr_ring_colours()

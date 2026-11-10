@@ -35,7 +35,7 @@ over 48 hours from 1 June 2024.
 Four articles go further. [Range models: bring your own, or start from two
 distances](range-model.html) takes a range model that varies with depth and date into a
 field for each day. [Hourly positions against the true track](positioning.html) scores the
-surfaces against the simulated tracks, from the hourly error to depth use. [Habitat
+surfaces against the simulated tracks, from the hourly error to the use map. [Habitat
 selection: depth use from hourly positions](habitat-selection.html) draws availability
 points and compares the depth coefficient from positions with the one from the true tracks.
 [Position fish from a cleaned detection set](from-detqc.html) hands a cleaned detection
@@ -88,10 +88,6 @@ head(range_test[, c("datetime", "depth_m", "distance_m", "sent", "heard")])
 table(range_test$depth_m, range_test$distance_m)
 ```
 
-The two messages explain the counts: part-hours at either end of a deployment are left out,
-and `sent` is raised to the count in an hour where a receiver heard more transmissions than
-the mean delay gives.
-
 ## 2. Fit the range model
 
 **detfield** never fits a range model; it reads yours. The range model here is a logistic
@@ -109,9 +105,8 @@ dispersion
 ```
 
 A dispersion of `r round(dispersion, 2)` is consistent with no variation between receivers or
-hours beyond binomial chance. It does not show that the spread of one receiver's hourly
-detection probability about the curve is 0, only that this range test gives no sign of one, so
-the model below takes the spread as 0. `de_model()` wraps the fit with that spread:
+hours beyond binomial chance, so the model below takes the spread as 0. `de_model()` wraps the
+fit with that spread:
 
 ```{r de-model}
 # Wrap the fitted model with a spread of 0
@@ -178,10 +173,8 @@ field <- de_field(distances, model)
 field
 ```
 
-The message counts receiver-cell pairs with land on the straight line between them, which
-the curve reads as if the line were clear (`blocked` in `?de_model`). A line that only grazes
-the corner of a land cell is clear. `plot()` maps the probability that at least one receiver
-detects a transmission from each cell:
+`plot()` maps the probability that at least one receiver detects a transmission from each
+cell:
 
 ```{r plot-field, fig.height = 5.2, fig.alt = "Probability that at least one of the 70 receivers detects a transmission from each water cell of Stoney Lake: bright overlapping patches round the receivers, darker water between and beyond them."}
 # Map the field: the probability that any receiver detects a transmission
@@ -217,17 +210,10 @@ head(counts[counts$y > 0, c("animal_id", "bin_start", "station_id", "y", "n")])
 table(unique(counts[c("animal_id", "bin_start")])$animal_id)
 ```
 
-`location_surface()` computes, for each animal and detected hour, the posterior probability
-that the animal was in each water cell. Each listening receiver's count is binomial in `n`,
-the expected number of transmissions in the hour (the hour over the tag's mean delay, rounded,
-taken as known), with the detection probability the field gives for that receiver and cell.
-The receivers' terms are multiplied and normalised over every water cell, which is a flat
-prior over water. By default a receiver-hour spread is added when the range model gives one
-above 0; the model here gives 0, so the terms are plain binomials. Each hour is computed on its
-own, as if the animal stayed in one cell for the hour, with no movement model linking hours.
-[The model](positioning.html#the-model) gives the equation, the assumptions and the published
-methods it stands beside. A surface is stored as the smallest set of cells holding 0.999 of
-its probability.
+`location_surface()` computes, for each animal and detected hour, the probability that the
+animal was in each water cell, from the counts at every listening receiver. Each hour is
+computed on its own, with no movement model linking hours
+([the model](positioning.html#the-model)).
 
 ```{r location-surface}
 # Compute one surface per animal and detected hour
@@ -235,9 +221,9 @@ surface <- location_surface(counts, field)
 surface
 ```
 
-The print summarises the run: cells kept per hour, hours whose counts no single cell explains
-(`Misfit`), and hours placed on a ring away from the receiver that heard most (`Near`), the
-signature of an hour heard mostly by one receiver. In the hour from 07:00 UTC on 1 June 2024,
+The print gives the cells kept per hour, the hours whose counts no single cell explains
+(`Misfit`), and the hours placed on a ring away from the receiver that heard most (`Near`),
+which happens when an hour is heard mostly by one receiver. In the hour from 07:00 UTC on 1 June 2024,
 four receivers heard `stoney-01`. Its surface for that hour is drawn with its true path from
 the simulation:
 
@@ -265,8 +251,7 @@ plot(surface, animal_id = "stoney-01", bin_start = hour_start) +
 ```
 
 *Location surface of `stoney-01` for 07:00 to 08:00 UTC on 1 June 2024, with the true path of
-the hour (line, one position a minute). The surface keeps the smallest set of cells that holds
-99.9% of the hour's probability; the water cells outside it are not stored.*
+the hour (line, one position a minute).*
 
 The surface lies where the four ranges meet, pulled away from the silent receivers round it.
 [Hourly positions against the true track](positioning.html) shows every hour of one animal
@@ -340,5 +325,5 @@ with the true tracks (lines, one position a minute) and the `r nrow(deployments)
 Most of each animal's draws sit along its own track. The draws of single-receiver hours sit on
 arcs round the receiver that heard the animal, some of them away from the track, as in the
 north-west arm, the north-east basin and the middle basin. [Hourly positions against the true
-track](positioning.html) turns draws like these into depth use and writes them to files for
-other packages.
+track](positioning.html) scores the positions and writes draws like these to files for other
+packages.

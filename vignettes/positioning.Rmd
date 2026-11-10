@@ -30,10 +30,9 @@ percent <- function(x) sprintf("%.0f%%", 100 * x)
 A location surface gives, for one animal and one hour, the probability that the animal was in
 each water cell. This page reads the surfaces of the five simulated animals included in
 `stoney_track` against their true tracks: where the hourly positions fall, how often the 95%
-regions hold the animal, and where the mean of the surfaces puts the animals. The study has 70 receivers on a grid with 600 to 700 m between neighbours on Stoney Lake, and the detections
-were drawn from a known range model, so the surfaces below use the model that made the data.
-[Get started](detfield.html) builds the field and the surfaces step by step; here they are
-built after the model.
+regions hold the animal, and where the mean of the surfaces puts the animals. The study has 70 receivers on a grid with 600 to 700 m between neighbours on Stoney Lake.
+The detections were drawn from a known range model, and the surfaces below use it.
+[Get started](detfield.html) builds the field and the surfaces step by step.
 
 ## The model
 
@@ -73,15 +72,12 @@ Each surface is a posterior distribution of one animal's position over the water
 raster, computed by Bayes' rule from one hour's detection counts. The data of an hour are, for
 every receiver listening in it, the number of the tag's transmissions that receiver detected.
 `bin_detections()` keeps the hours with at least one detection and gives every listening
-receiver of such an hour a count, 0 for the silent ones. A receiver listens in an hour when its
-deployment covers at least half of it (`min_cover = 0.5`), and it is then taken to have heard
-the whole hour.
+receiver of such an hour a count, 0 for the silent ones.
 
 The number of transmissions sent in the hour, $n_t$, is not observed. It is the expected
 number, the hour divided by the tag's mean delay and rounded: 24 for the Stoney tags' delay of
-120 to 180 s, the same in every hour, and treated as known. A tag whose codes are sent
-independently adds their rates, and $n_t$ is raised to the largest count when a receiver
-logged more detections than that. With a random delay the true number varies: in this
+120 to 180 s, the same in every hour, and treated as known. With a random delay the true
+number varies: in this
 simulation the tags sent `r min(sent)` to `r max(sent)` transmissions an hour, and
 `r sum(sent != 24)` of the `r length(sent)` animal-hours differ from 24.
 
@@ -101,30 +97,24 @@ where $t$ is the hour, $R_t$ the receivers listening in it, $y_{st}$ the detecti
 $s$ logged, $n_t$ the expected transmissions, $p_s(c)$ the field's detection probability for
 receiver $s$ and cell $c$, $W$ the number of water cells ($c$ and $c'$ run over all of them),
 $L_t(c)$ the likelihood of the hour's counts with the animal in cell $c$, and $P_t(c)$ the
-posterior probability of cell $c$. There is no prior term in the code. The likelihood is
-normalised over every water cell of the raster, cells no receiver can hear included, which is
-a flat prior over water, $1/W$ for every cell. A receiver that heard nothing contributes
-$\left[1 - p_s(c)\right]^{n_t}$, which is smallest near it, so its silence lowers the
-probability of the cells round it; a cell that no water path joins to a receiver has
-$p_s(c) = 0$ for it.
+posterior probability of cell $c$. The likelihood is normalised over every water cell of the
+raster, which is a flat prior over water, $1/W$ for every cell. A receiver that heard nothing
+contributes $\left[1 - p_s(c)\right]^{n_t}$, which is smallest near it, so its silence lowers
+the probability of the cells round it.
 
 The default of `location_surface()`, `overdispersion = "station_hour"`, reads a standard
 deviation $\sigma$ from the range model. With $\sigma > 0$ each receiver's binomial term is
-averaged, by Gauss-Hermite quadrature, over a receiver-hour effect
+averaged over a receiver-hour effect
 $u_{st} \sim \mathrm{Normal}(0, \sigma^2)$ added to the logit of $p_s(c)$, so a receiver may
 hear more or less in one hour than its curve gives. With $\sigma = 0$ the terms are plain
-binomials. A range model that gives no $\sigma$, the default of `de_model()` and
-`de_logistic()`, stops the call, which is why every example sets
+binomials. A range model that gives no $\sigma$ stops the call, which is why every example sets
 `sigma = list(station_hour = 0)` in `de_model()`. The range model on this page has
 $\sigma = 0$, as did the simulation that drew the detections.
 
-A surface is stored as the smallest set of cells holding 0.999 of its probability, and the
-stored probabilities are not rescaled. `credible_region()` adds cells to an hour's 95% credible
-region in order of probability, ties to the lower cell number, up to and including the cell at
-which the sum reaches 0.95, so the region holds at least 95%. A position draw
-(`sample_locations()`) is a cell drawn with replacement, with probability $P_t(c)$ renormalised
-over the stored cells, and placed at the cell centre. The hourly position used below is the
-posterior mean.
+A surface is stored as the smallest set of cells holding 0.999 of its probability. An hour's
+95% credible region (`credible_region()`) is the smallest set of cells holding at least 95% of
+it. A position draw (`sample_locations()`) is a cell drawn with replacement in proportion to
+$P_t(c)$ and placed at the cell centre. The hourly position used below is the posterior mean.
 
 The model assumes:
 
@@ -197,8 +187,7 @@ surface
 ```
 
 The hourly position below is the posterior mean of each surface, the probability-weighted
-mean of its cells. A surface stores the cells that contain 99.9% of its probability, so the
-weights are divided by their sum.
+mean of its cells.
 
 ```{r estimates}
 # Take each stored cell's position and probability
@@ -235,10 +224,8 @@ hours$error_m <- sqrt((hours$x - hours$x_true)^2 + (hours$y - hours$y_true)^2)
 summary(hours$error_m)
 ```
 
-The figures that follow take one animal for 12 hours. The window is chosen by a rule, so that
-its single-receiver hours are as common as in the whole study: the first run of 12 detected
-hours, by animal and then time, in which that share of the hours was heard by one receiver and
-the run does not open on such an hour.
+The figures that follow take one animal for 12 hours: the first run of 12 detected hours in
+which single-receiver hours are as common as in the whole study.
 
 ```{r window}
 # Turn the study's share of single-receiver hours into a count out of 12
@@ -266,10 +253,6 @@ window_hours <- hours[hours$animal_id == animal & in_window(hours$bin_start), ]
 window_hours[c("bin_start", "receivers_heard", "error_m")]
 ```
 
-The map window spans the track and the hourly positions, with 600 m to spare on each side.
-Each receiver's ring on the next two maps is sized by the animal's detections at that
-receiver over the 12 hours. Receivers within 150 m of the window's edge are left off the maps.
-
 ```{r window-receivers}
 # Set the map window to the track and the positions, with 600 m round them
 view <- list(x = range(window_track$x, window_hours$x) + c(-600, 600),
@@ -290,9 +273,6 @@ depth_cells <- round(terra::as.data.frame(abs(lake), xy = TRUE), 1)
 names(depth_cells)[3] <- "depth_m"
 c(heard = sum(window_rx$detections > 0), silent = sum(window_rx$detections == 0))
 ```
-
-`r sum(window_rx$detections > 0)` of the `r nrow(window_rx)` receivers on the next two maps
-heard the animal in these 12 hours.
 
 ```{r result-positions, fig.height = 5.6, fig.alt = "Map of one animal's 12-hour track with each hour's estimated position joined to its true mean position."}
 # Map depth, track, receivers, then each estimate joined to its truth
@@ -328,10 +308,8 @@ ggplot(depth_cells, aes(x, y)) +
 
 *Hourly positions of `r animal` from `r format(window[1], "%H:%M UTC on %e June")` to
 `r format(window[2], "%H:%M UTC on %e June 2024")`: the posterior mean of each detected hour's
-surface, joined by its error to the animal's mean true position in the hour. The
-`r sum(single)` single-receiver hours are
-`r knitr::combine_words(format(window_hours$bin_start[single], "%H:00"))`. The track has one
-position a minute. The rings count each receiver's detections of the animal over all 12 hours.*
+surface and the animal's mean true position in the hour. The `r sum(single)` single-receiver
+hours are `r knitr::combine_words(format(window_hours$bin_start[single], "%H:00"))`.*
 
 The `r sum(!single)` hours heard by two receivers or more are placed a median
 `r metres(median(window_hours$error_m[!single]))` m from the truth, and the single-receiver
@@ -350,11 +328,10 @@ single_hours$to_receiver_m <- sqrt((single_hours$x - single_hours$x_receiver)^2 
 round(summary(single_hours$to_receiver_m))
 ```
 
-In the `r nrow(single_hours)` single-receiver hours the surface is a ring or an arc round the
-one receiver, and its posterior mean lies `r metres(min(single_hours$to_receiver_m))` to
-`r metres(max(single_hours$to_receiver_m))` m from that receiver (median
-`r metres(median(single_hours$to_receiver_m))` m). The error of such an hour is the distance
-from that point to wherever on the ring the animal swam.
+In a single-receiver hour the surface is a ring or an arc round the one receiver, and its
+posterior mean lies a median `r metres(median(single_hours$to_receiver_m))` m from that
+receiver. The error of such an hour is the distance from that point to wherever on the ring
+the animal swam.
 
 ## The track and its transmissions
 
@@ -427,7 +404,7 @@ hour_grid <- merge(hour_grid, hour_cells[c("panel", "x", "y", "share")],
 levels(hour_grid$panel)
 ```
 
-The second gives every receiver in the window its count in each hour, for the rings:
+The next chunk gives every receiver in the window its count in each hour, for the rings:
 
 ```{r hour-panels-receivers}
 # List every receiver once per hour, with that hour's count of the animal
@@ -472,8 +449,7 @@ ggplot(hour_grid, aes(x, y)) +
 
 *Location surfaces of `r animal`, one panel per hour from
 `r format(window[1], "%H:%M UTC on %e June")` to
-`r format(window[2] - 3600, "%H:%M UTC on %e June 2024")`, in the window of the maps above.
-Cells under 0.02 of the hour's largest are left out with the water outside the surface.*
+`r format(window[2] - 3600, "%H:%M UTC on %e June 2024")`.*
 
 In the two single-receiver hours the surface surrounds the one receiver that heard the animal
 (17:00) or curves around one side of it (23:00), and the hour's track runs through it. In the
@@ -659,13 +635,10 @@ ggplot(use_cells, aes(x, y)) +
   theme_positionr()
 ```
 
-*Where the five animals spent their `r nrow(hours)` detected hours over 1 and 2 June 2024, per
-100 m water cell: (a) from the hourly surfaces; (b) from the
-`r format(nrow(minutes), big.mark = ",")` true minutes of those hours. Each panel shows the
-smallest set of its cells holding 95% of its total (`r nrow(use_95)` and
-`r format(nrow(true_use_95), big.mark = ",")` cells); the rest of the water holds at most 5%.
-The arcs that remain in panel (a) are single-receiver hours. The colour scale is square-root
-stretched.*
+*Where the five animals spent their `r nrow(hours)` detected hours over 1 and 2 June 2024:
+(a) from the hourly surfaces; (b) from the `r format(nrow(minutes), big.mark = ",")` true
+minutes of those hours. Each panel shows the cells holding 95% of its total. The arcs in
+panel (a) are single-receiver hours.*
 
 The estimated map puts `r percent(near_track[["same_cell"]])` of its probability in cells the
 animals swam through and `r percent(near_track[["within_200_m"]])` within 200 m of them, but
@@ -711,9 +684,8 @@ receivers or more.
 
 ## From positions to habitat selection
 
-The five animals here have no preference for depth, so this page does not test selection.
-[Habitat selection: depth use from hourly positions](habitat-selection.html) does, on 40
-animals with a known preference, and sets depth use from the positions against the true track.
+[Habitat selection: depth use from hourly positions](habitat-selection.html) tests depth
+selection on 40 animals with a known preference.
 
 ## Hand the positions on
 
@@ -757,14 +729,11 @@ animal is detected more often where the array covers well. Each hour is computed
 as if the animal stayed in one cell, which sets the coverage measured above. A smoother that
 links consecutive hours through a model of movement on the water grid, giving undetected hours
 a position and calibrated regions, is planned for a later version. Positions are as good as the range model: [Range models: bring
-your own, or start from two distances](range-model.html) shows how to bring yours. The bin table of a
-surface, `attr(surface, "bins")`, flags hours whose counts no single cell explains
-(`misfit_p` below 0.01).
+your own, or start from two distances](range-model.html) shows how to bring yours.
+`attr(surface, "bins")` flags the hours whose counts no single cell explains.
 
-`location_surface(likelihood = "presence_only")` reads the curve from the detections alone,
-dropping misses and silent receivers. It never places an animal away from the receivers that
-heard it, but its regions narrow as the count grows whatever the curve's level;
-`?location_surface` gives its coverage on this study against the binomial reading used here.
+`location_surface(likelihood = "presence_only")` uses the detections alone, without misses or
+silent receivers; `?location_surface` compares it with the binomial reading used here.
 
 ## Next
 

@@ -36,10 +36,10 @@ cat(paste0(
 
 The [**detqc**](https://jakebrownscombe.github.io/detqc/) R package reads, checks and filters
 detection files into a detection set; **detfield** positions the animals. This page reads the
-files of the Stoney Lake example included with **detfield**, five simulated animals heard by
-70 receivers on a grid with 600 to 700 m between neighbours over 48 hours from 1 June 2024, with **detqc**'s readers, hands
+files of the Stoney Lake example included with **detfield** with **detqc**'s readers, hands
 the detection set to `bin_detections()` with `detqc::as_detfield_input()`, and computes the
-hourly location surfaces. A detection set that **detqc** has checked and filtered, such as its
+hourly location surfaces. The example has five simulated animals and 70 receivers over 48
+hours from 1 June 2024. A detection set that **detqc** has checked and filtered, such as its
 own `detqc::stoney_clean`, is handed over the same way.
 
 ## Read the files into a detection set
@@ -102,8 +102,8 @@ dets
 
 `detqc::as_detfield_input()` returns the three tables `bin_detections()` reads: the
 detections, the listening table, and the tag delays from the animals table. A receiver counts
-as listening in an hour only when it was in the water and, where the listening audit of
-**detqc** has run, the audit did not mark its day as silent.
+as listening in an hour when it was in the water and the listening audit of **detqc**, where
+it has run, did not mark its day as not listening.
 
 ```{r hand-off}
 # Export the detections, the listening table and the tag delays for detfield
@@ -131,8 +131,7 @@ curve <- de_logistic(d50 = c(250, 750), d05 = c(500, 1500), depth = c(1, 35))
 field <- de_field(distances, de_model(curve, sigma = list(station_hour = 0)))
 ```
 
-`location_surface()` gives each detected hour a posterior probability over the water cells,
-from the binomial counts of every listening receiver under a flat prior, each hour on its own
+`location_surface()` gives each detected hour a probability over the water cells
 ([the model](positioning.html#the-model)):
 
 ```{r surfaces}
@@ -140,32 +139,6 @@ from the binomial counts of every listening receiver under a flat prior, each ho
 surface <- location_surface(hourly, field)
 surface
 ```
-
-```{r near-from-xy, include = FALSE, purl = FALSE}
-# The positioning article places the receivers by their x and y; the same
-# counts on a field built from those positions give its Near count
-bins_here <- attr(surface, "bins")
-near_here <- sum(bins_here$near_mass < 0.001, na.rm = TRUE)
-field_xy <- suppressMessages(de_field(
-  water_distances(lake, stoney_track$receivers),
-  de_model(curve, sigma = list(station_hour = 0))
-))
-bins_xy <- merge(bins_here[c("animal_id", "bin_start", "near_mass")],
-                 attr(location_surface(hourly, field_xy), "bins"),
-                 by = c("animal_id", "bin_start"), suffixes = c("", "_xy"))
-near_xy <- sum(bins_xy$near_mass_xy < 0.001, na.rm = TRUE)
-crossed <- sum((bins_xy$near_mass < 0.001) != (bins_xy$near_mass_xy < 0.001),
-               na.rm = TRUE)
-rx_here <- attr(distances, "receivers")
-rx_xy <- stoney_track$receivers[match(rx_here$station_id,
-                                      stoney_track$receivers$station_id), ]
-offset_cm <- 100 * max(sqrt((rx_here$x - rx_xy$x)^2 + (rx_here$y - rx_xy$y)^2))
-```
-
-The print counts `r near_here` hours as `Near`, where [Hourly positions against the true
-track](positioning.html) counts `r near_xy` for the same study, because that page places the
-receivers by their `x` and `y` and this one by their latitude and longitude, which puts them up
-to `r round(offset_cm)` cm apart and moves `r crossed` hours across the 0.001 cut.
 
 ## Hours by receivers heard
 

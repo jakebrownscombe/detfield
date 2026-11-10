@@ -43,15 +43,15 @@ shallow_ratio <- sapply(1:2, function(b) {
 })
 ```
 
-Hourly location surfaces can feed a habitat-selection analysis: the positions of an animal in
+Hourly location surfaces can be used in a habitat-selection analysis: the positions of an animal in
 the hours it was heard are set against the water available to it, to ask which depths it used
 more than their availability. This page tests that use on simulated animals whose preference
 for depth is known, comparing the answer from position estimates with the answer from the
 true track. A position draw is one water cell drawn from an hour's location surface with
 probability equal to the cell's posterior probability, so a set of draws from each detected
-hour carries the hour's uncertainty into the analysis ([the
-model](positioning.html#the-model)). The page needs **detfield**, which includes the study, and
-the **survival** R package for the conditional logit; [Get started](detfield.html) shows how
+hour represents the hour's uncertainty in the analysis ([the
+model](positioning.html#the-model)). The page needs the **survival** R package for the
+conditional logit; [Get started](detfield.html) shows how
 the surfaces behind the draws are built.
 
 On average, position draws from hourly surfaces put a simulated animal
@@ -108,8 +108,6 @@ hours lie beyond the 6 m axis limits.*
 ```{r shift-numbers, include = FALSE, purl = FALSE}
 # Numbers the prose quotes, read from the hourly table
 shift_mean <- tapply(trial_hours$shift_m, trial_hours$block, mean)
-shift_fit <- coef(lm(drawn_m ~ true_m,
-                     data = trial_hours[trial_hours$block == 1, ]))
 band_value <- function(b, band, what = "mean_m") {
   shift_by_band[shift_by_band$block == b & shift_by_band$band == band, what]
 }
@@ -267,7 +265,7 @@ share_of <- function(b, set) {
 ```
 
 The draws are deeper than the true positions for `r sum(by_animal$drawn_m > by_animal$true_m)`
-of the 40 animals, on the mean of each. What the draws lose is the shallow edge: animals with a
+of the 40 animals, on the mean of each. The draws under-represent the shallowest water: animals with a
 shallow preference spent `r pct(share_of(-0.3, "True positions"))` of their true points in
 water 1 m deep or less, and `r pct(share_of(-0.3, "Position draws"))` of their draws fall
 there.
@@ -303,8 +301,8 @@ head(available[["selection-01"]], 3)
 writeLines(strwrap(attr(available[["selection-01"]], "estimand"), 72))
 ```
 
-`uniform_above` draws uniformly over the cells at or above a probability. The example of
-positionR 1.x drew over the cells strictly above 0.1.
+`uniform_above` draws uniformly over the cells at or above a probability, here 0.1 per
+transmission:
 
 ```{r available-uniform}
 # Uniform over cells heard with p >= 0.1 per transmission, one animal
@@ -320,9 +318,8 @@ june1_cells <- c(water = nrow(june1), at_or_above = sum(june1$p >= 0.1),
 june1_cells
 ```
 
-On 1 June this mode draws from `r format(june1_cells[["at_or_above"]], big.mark = ",")` of
-the `r format(june1_cells[["water"]], big.mark = ",")` water cells, and the rule of 1.x keeps
-`r format(june1_cells[["strictly_above"]], big.mark = ",")`.
+On 1 June that is `r format(june1_cells[["at_or_above"]], big.mark = ",")` of the
+`r format(june1_cells[["water"]], big.mark = ",")` water cells.
 
 ```{r map-data}
 # One animal with a preference for shallow water: its true track, its
@@ -398,8 +395,7 @@ ggplot(depth_cells, aes(x, y)) +
   theme_positionr()
 ```
 
-*The same animal in its bay over the 48 hours. The true track has one simulated position a
-minute (to within 10 m).*
+*The same animal in its bay over the 48 hours, with its true track.*
 
 ## Stack and fit
 
@@ -475,8 +471,7 @@ ggplot(animals, aes(truth, positions, shape = group)) +
   theme(legend.position = "bottom")
 ```
 
-*Depth coefficient of each animal, with 95% intervals (vertical, from the position draws;
-horizontal, from the true track). Dashed line, equal coefficients.*
+*Depth coefficient of each animal, with 95% intervals. Dashed line, equal coefficients.*
 
 ```{r between-count, include = FALSE, purl = FALSE}
 # Animals with a negative true-track coefficient whose positions fall

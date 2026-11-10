@@ -8,19 +8,12 @@
 
 **detfield** turns the detections of a fixed acoustic receiver array
 into hourly location surfaces: for each tagged animal and hour, the
-probability that the animal was in each water cell. Each surface is a
-Bayesian posterior over the water cells. Every listening receiver's
-count of the tag's transmissions in the hour is binomial in the expected
-number sent (the hour over the tag's mean delay, taken as known), with
-detection probability from your range model at the distance through
-water, and by default a receiver-hour spread when the model gives one.
-The likelihood is normalised over every water cell, a flat prior over
-water, and each hour is estimated on its own, with no movement model
-([the
+probability that the animal was in each water cell. It takes a range
+model you fitted, a depth raster of the water body, the receiver
+deployments, the detections and the tag delays, in the column names the
+positionR packages share. Each hour is estimated on its own, with no
+movement model ([the
 model](https://jakebrownscombe.github.io/detfield/articles/positioning.html#the-model)).
-It takes a range model you fitted, a depth raster of the water body, the
-receiver deployments, the detections and the tag delays, in the column
-names the positionR packages share.
 
 ## Install
 
@@ -67,12 +60,9 @@ plot(surface)
 <img src="man/figures/README-plot-surface-1.png" alt="Location surface of stoney-02 for one hour: a compact bright patch among the receivers that heard it, with its 50% and 95% credible regions outlined." width="100%" />
 
 *Location surface of `stoney-02` for 08:00 to 09:00 UTC on 1 June 2024,
-from its 29 detections at 5 receivers, on 100 m water cells. The surface
-keeps the smallest set of cells that holds 99.9% of the hour's
-probability; the water cells outside it are not stored.*
+from its 29 detections at 5 receivers, on 100 m water cells.*
 
-The 95% credible region of the hour holds 6 water cells, and the most
-probable cell is 316 m from the nearest receiver that heard the animal.
+The 95% credible region of the hour holds 6 water cells.
 
 ## Articles
 
@@ -117,12 +107,9 @@ Lake.
 - [**arraydesignR**](https://jakebrownscombe.github.io/arraydesignR/):
   **arraydesign** as a point-and-click application.
 
-**detqc** exports the same five figure functions as **detfield**:
-`theme_positionr()`, `scale_fill_probability()`, `scale_fill_depth()`,
-`annotation_scale_bar()` and `positionr_ring_colours()`. With both
-packages attached, R reports the later one's copies as masking the
-earlier one's. The copies are identical, so either works; attach one, or
-call them with `detfield::`. Every map in the suite draws a receiver in
+**detqc** exports the same five figure functions as **detfield**. The
+copies are identical, so the masking message R prints when both packages
+are attached can be ignored. Every map in the suite draws a receiver in
 the three ring colours:
 
 ``` r
@@ -133,10 +120,11 @@ positionr_ring_colours()
 
 ## Cite
 
-Brownscombe J (2026). *positionR: tools for acoustic telemetry studies*.
-R package version 2.0.0, <https://jakebrownscombe.github.io/positionR/>.
+Brownscombe JW (2026). *positionR: tools for acoustic telemetry
+studies*. R package version 2.0.0,
+<https://jakebrownscombe.github.io/positionR/>.
 
-Brownscombe J (2026). *detfield: Detection Fields and Location Surfaces
+Brownscombe JW (2026). *detfield: Detection Fields and Location Surfaces
 for Acoustic Telemetry*. R package version 0.1.1,
 <https://jakebrownscombe.github.io/detfield/>.
 

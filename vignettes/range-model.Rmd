@@ -38,9 +38,8 @@ cat(paste0(
 
 **detfield** never fits a range model. `de_model()` takes the one you fitted: a `glm`, an
 **mgcv** `gam` or a **glmmTMB** model, a table of curve values, or a function of distance and
-depth. A smooth over time goes in as an **mgcv** fit: **glmmTMB** fits the wiggly part of an
-`s()` smooth as a random effect, and `de_model()` drops random effects, so a **glmmTMB** smooth
-reaches the field as a straight line; `de_model()` warns when it is given one.
+depth. Fit a smooth over time with **mgcv**: `de_model()` drops random effects, so the `s()`
+smooth of a **glmmTMB** model reaches the field as a straight line.
 `de_logistic()` builds a curve from two distances, for a study with no range test. Detection
 range varies across a water body and over time, with receiver depth, wind, noise, temperature
 structure and the bottom, and a range model fitted to your own range test or sentinel tags is
@@ -139,8 +138,7 @@ summary(time_fit)$s.table
 ```
 
 
-The smooth uses `r round(summary(time_fit)$s.table["s(day)", "edf"], 1)` effective
-degrees of freedom over the six days. The counts were simulated with a fall of 0.25 logits for
+The counts were simulated with a fall of 0.25 logits for
 each m/s of the day's mean wind (`?stoney_range_covariates`), so the smooth can be checked
 against the day effect it should find:
 
@@ -176,8 +174,7 @@ spread <- sqrt(sum(sds^2))
 spread
 ```
 
-The counts were simulated with standard deviations of 0.5 and 0.9, a spread of
-`r round(sqrt(0.5^2 + 0.9^2), 2)`. `de_model()` reads the fit through `predict()` with the
+`de_model()` reads the fit through `predict()` with the
 random effects left out. A modulator gives the model each day's covariates: here a function
 that turns a date into the day number. A covariates function adds the columns `predict()`
 needs for the two left-out effects:
@@ -198,9 +195,9 @@ time_model <- de_model(time_fit, sigma = list(station_hour = spread),
 time_model
 ```
 
-For a fitted model given with a covariates function, `reads` lists only `distance_m`, because
-which other columns the function passes on cannot be known in advance (`?de_model`); the model
-still reads the receiver depth, the tag model and the day. `de_field()` evaluates the
+For a fitted model given with a covariates function, `reads` lists only `distance_m`
+(`?de_model`); the model still reads the receiver depth, the tag model and the day.
+`de_field()` evaluates the
 modulators for its `date` and reads the model at each receiver's depth. It needs the lake and the distances through water from the receivers, here the 70 of
 the Stoney example:
 
@@ -299,7 +296,8 @@ daily_shares
 ```
 
 No cell is heard at 0.5 by two receivers on either day: under this curve one transmission is
-placed by one receiver at most, and the hourly counts of many transmissions do the rest.
+placed by one receiver at most, so a position comes from the hourly counts of many
+transmissions.
 
 ```{r coverage-map-data}
 # Give each day's coverage its coordinates and a panel label
@@ -409,6 +407,6 @@ that table.
 ## Next
 
 - [Hourly positions against the true track](positioning.html): the surfaces of the example
-  study scored against the true tracks, from the hourly error to depth use.
+  study scored against the true tracks, from the hourly error to the use map.
 - [Position fish from a cleaned detection set](from-detqc.html): a cleaned detection set
   handed to `bin_detections()`.
