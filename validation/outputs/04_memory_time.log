@@ -1,0 +1,156 @@
+
+> library(detfield)
+
+> child <- tempfile(fileext = ".R")
+
+> writeLines(c("a <- commandArgs(TRUE)", "chunk <- as.numeric(a[1])", 
++     "suppressPackageStartupMessages(library(detfield))", "f <- get('corner_si ..." ... [TRUNCATED] 
+
+> time_flag <- if (Sys.info()[["sysname"]] == "Darwin") "-l" else "-v"
+
+> rscript <- file.path(R.home("bin"), "Rscript")
+
+> if (nzchar(Sys.which("uptime"))) system("uptime", 
++     intern = TRUE)
+[1] "23:21  up 37 days,  2:50, 1 user, load averages: 6.48 6.01 5.42"
+
+> parallel::detectCores()
+[1] 16
+
+> run_once <- function(chunk = 2e+05, path = "exact", 
++     fact = 1) {
++     out <- system2("/usr/bin/time", c(time_flag, shQuote(rscript), 
++       .... [TRUNCATED] 
+
+> n_pairs <- 10
+
+> batches <- do.call(rbind, lapply(seq_len(n_pairs), 
++     function(pair) {
++         sizes <- if (pair%%2) 
++             c(2e+06, 2e+05)
++          .... [TRUNCATED] 
+
+> print(batches, digits = 6)
+   pair chunk  path cell_m   rows   checksum elapsed_s  peak_mb
+1     1 2e+06 exact    100 337190 2219122560     3.741 2021.531
+2     1 2e+05 exact    100 337190 2219122560     3.786 1004.766
+3     2 2e+05 exact    100 337190 2219122560     3.706  893.109
+4     2 2e+06 exact    100 337190 2219122560     3.702 2098.812
+5     3 2e+06 exact    100 337190 2219122560     3.563 1764.109
+6     3 2e+05 exact    100 337190 2219122560     3.812  994.719
+7     4 2e+05 exact    100 337190 2219122560     3.812 1050.531
+8     4 2e+06 exact    100 337190 2219122560     3.651 1721.312
+9     5 2e+06 exact    100 337190 2219122560     3.669 2038.297
+10    5 2e+05 exact    100 337190 2219122560     3.841 1038.156
+11    6 2e+05 exact    100 337190 2219122560     3.818 1038.328
+12    6 2e+06 exact    100 337190 2219122560     3.683 2042.750
+13    7 2e+06 exact    100 337190 2219122560     3.791 1951.844
+14    7 2e+05 exact    100 337190 2219122560     3.931 1020.781
+15    8 2e+05 exact    100 337190 2219122560     3.818 1051.922
+16    8 2e+06 exact    100 337190 2219122560     3.743 2041.906
+17    9 2e+06 exact    100 337190 2219122560     3.664 1997.672
+18    9 2e+05 exact    100 337190 2219122560     3.773  980.594
+19   10 2e+05 exact    100 337190 2219122560     3.818 1050.484
+20   10 2e+06 exact    100 337190 2219122560     3.772 1870.500
+
+> length(unique(batches$rows)) == 1 && length(unique(batches$checksum)) == 
++     1
+[1] TRUE
+
+> big <- batches[batches$chunk == 2e+06, ]
+
+> small <- batches[batches$chunk == 2e+05, ]
+
+> small <- small[match(big$pair, small$pair), ]
+
+> ratio <- data.frame(pair = big$pair, memory_ratio = small$peak_mb/big$peak_mb, 
++     time_ratio = small$elapsed_s/big$elapsed_s)
+
+> print(ratio, digits = 3)
+   pair memory_ratio time_ratio
+1     1        0.497       1.01
+2     2        0.426       1.00
+3     3        0.564       1.07
+4     4        0.610       1.04
+5     5        0.509       1.05
+6     6        0.508       1.04
+7     7        0.523       1.04
+8     8        0.515       1.02
+9     9        0.491       1.03
+10   10        0.562       1.01
+
+> nrow(ratio)
+[1] 10
+
+> range(ratio$memory_ratio)
+[1] 0.4255308 0.6103083
+
+> range(ratio$time_ratio)
+[1] 1.001080 1.069885
+
+> cat(sprintf("Memory ratio %.2f to %.2f, time ratio %.3f to %.3f, over %d pairs\n", 
++     min(ratio$memory_ratio), max(ratio$memory_ratio), min(rati .... [TRUNCATED] 
+Memory ratio 0.43 to 0.61, time ratio 1.001 to 1.070, over 10 pairs
+
+> path_runs <- function(fact, runs) {
++     do.call(rbind, lapply(seq_len(runs), function(r) {
++         cbind(run = r, rbind(run_once(path = "exact", .... [TRUNCATED] 
+
+> paths <- rbind(path_runs(1, 5), path_runs(4, 3))
+
+> print(paths, digits = 6)
+   run chunk  path cell_m    rows    checksum elapsed_s  peak_mb
+1    1 2e+05 exact    100  337190  2219122560     3.858 1055.438
+2    1 2e+05  grid    100  337260  2334072889     1.365  487.422
+3    2 2e+05 exact    100  337190  2219122560     3.860 1007.812
+4    2 2e+05  grid    100  337260  2334072889     1.393  514.859
+5    3 2e+05 exact    100  337190  2219122560     3.770  981.672
+6    3 2e+05  grid    100  337260  2334072889     1.315  405.406
+7    4 2e+05 exact    100  337190  2219122560     3.867 1033.984
+8    4 2e+05  grid    100  337260  2334072889     1.334  432.391
+9    5 2e+05 exact    100  337190  2219122560     3.862 1024.312
+10   5 2e+05  grid    100  337260  2334072889     1.322  436.594
+11   1 2e+05 exact     25 5395040 35508143653    87.603 2185.703
+12   1 2e+05  grid     25 5396160 37323918912    26.524 1885.359
+13   2 2e+05 exact     25 5395040 35508143653    89.418 2231.250
+14   2 2e+05  grid     25 5396160 37323918912    28.315 1842.359
+15   3 2e+05 exact     25 5395040 35508143653    87.257 2178.328
+16   3 2e+05  grid     25 5396160 37323918912    28.852 1932.812
+
+> path_med <- aggregate(cbind(elapsed_s, peak_mb, rows) ~ 
++     path + cell_m, data = paths, FUN = stats::median)
+
+> path_med$runs <- aggregate(elapsed_s ~ path + cell_m, 
++     data = paths, FUN = length)$elapsed_s
+
+> print(path_med, digits = 4)
+   path cell_m elapsed_s peak_mb    rows runs
+1 exact     25    87.603  2185.7 5395040    3
+2  grid     25    28.315  1885.4 5396160    3
+3 exact    100     3.860  1024.3  337190    5
+4  grid    100     1.334   436.6  337260    5
+
+> if (nzchar(Sys.which("uptime"))) system("uptime", 
++     intern = TRUE)
+[1] "23:29  up 37 days,  2:58, 1 user, load averages: 11.94 9.91 7.62"
+
+> sessionInfo()
+R version 4.2.1 (2022-06-23)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 15.7.7
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRblas.0.dylib
+LAPACK: /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRlapack.dylib
+
+locale:
+[1] C
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] detfield_0.1.1
+
+loaded via a namespace (and not attached):
+[1] compiler_4.2.1 parallel_4.2.1

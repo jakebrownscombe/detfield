@@ -1,0 +1,344 @@
+---
+title: "Fish positioning with detection range information"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Fish positioning with detection range information}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE, purl = FALSE}
+options(width = 76)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 8,
+                      fig.height = 4.8, out.width = "100%", dpi = 96)
+# Cut each figure to a palette of 256 colours, about a third of its size with
+# no visible change, because the built vignettes ship in the tarball
+if (requireNamespace("magick", quietly = TRUE)) {
+  knitr::opts_chunk$set(fig.process = function(path) {
+    img <- magick::image_quantize(magick::image_read(path), max = 256,
+                                  colorspace = "sRGB", dither = FALSE)
+    magick::image_write(img, path, format = "png")
+    path
+  })
+}
+```
+
+**detfield** turns the detections of a fixed receiver array into hourly location surfaces:
+for each tagged animal and hour, the probability that it was in each water cell. It reads the
+range model you fitted to your range test, measures distances through water round points and
+islands, and builds a detection field that gives every receiver a probability of hearing a
+transmission from every cell. The surfaces then use every listening receiver, the silent ones
+included. This page runs the whole chain on the Stoney Lake example included with the package:
+a range test, 70 receivers on a 100 m raster, and five simulated animals with known tracks
+over 48 hours from 1 June 2024.
+
+Four articles go further. [Range models: bring your own, or start from two
+distances](range-model.html) takes a range model that varies with depth and date into a
+field for each day. [Hourly positions against the true track](positioning.html) scores the
+surfaces against the simulated tracks, from the hourly error to depth use. [Habitat
+selection: depth use from hourly positions](habitat-selection.html) draws availability
+points and compares the depth coefficient from positions with the one from the true tracks.
+[Position fish from a cleaned detection set](from-detqc.html) hands a cleaned detection
+set from the [**detqc**](https://jakebrownscombe.github.io/detqc/) R package to
+**detfield**.
+
+## 1. Read the range test and count it
+
+A range test is three files: the receivers, the range-test tags with their positions and
+delays, and the detections. Serial numbers are read as text, so that leading zeros survive.
+
+```{r read-range-test}
+# Attach detfield, and ggplot2 for the figures
+library(detfield)
+library(ggplot2)
+# Find a file included with the package
+in_file <- function(name) system.file("extdata", name, package = "detfield")
+serial_text <- c(receiver_serial = "character")
+# Read the three range-test files and count their rows
+rt_detections <- read.csv(in_file("stoney_range_test_detections.csv"),
+                          colClasses = serial_text)
+rt_receivers <- read.csv(in_file("stoney_range_test_receivers.csv"),
+                         colClasses = serial_text)
+rt_tags <- read.csv(in_file("stoney_range_test_tags.csv"))
+c(detections = nrow(rt_detections), receivers = nrow(rt_receivers),
+  tags = nrow(rt_tags))
+```
+
+The times are text in the files; **detfield** takes them as date-times in UTC:
+
+```{r range-test-times}
+# Convert detection, deployment and recovery times to UTC date-times
+rt_detections$datetime <- as.POSIXct(rt_detections$datetime, tz = "UTC")
+for (col in c("deploy_datetime", "recover_datetime")) {
+  rt_receivers[[col]] <- as.POSIXct(rt_receivers[[col]], tz = "UTC")
+  rt_tags[[col]] <- as.POSIXct(rt_tags[[col]], tz = "UTC")
+}
+range(rt_detections$datetime)
+```
+
+`range_test_counts()` returns one row per receiver, tag and whole hour in which both were in
+the water: the transmissions sent, the detections heard, the distance and the receiver depth.
+Hours in which a receiver heard nothing from a tag stay in, with `heard = 0`.
+
+```{r count-range-test}
+# Count transmissions sent and heard per receiver, tag and hour
+range_test <- range_test_counts(rt_detections, rt_receivers, rt_tags)
+head(range_test[, c("datetime", "depth_m", "distance_m", "sent", "heard")])
+# Count the rows per receiver depth (m) and distance (m)
+table(range_test$depth_m, range_test$distance_m)
+```
+
+The two messages explain the counts: part-hours at either end of a deployment are left out,
+and `sent` is raised to the count in an hour where a receiver heard more transmissions than
+the mean delay gives.
+
+## 2. Fit the range model
+
+**detfield** never fits a range model; it reads yours. The range model here is a logistic
+regression of the transmissions heard on distance, receiver depth and their interaction, so
+that a deeper receiver hears further. Its Pearson dispersion measures spread beyond the
+binomial:
+
+```{r fit-range-model}
+# Fit a binomial GLM of heard out of sent on distance and receiver depth
+fit <- glm(cbind(heard, sent - heard) ~ distance_m * depth_m,
+           family = binomial, data = range_test)
+# Compute the Pearson dispersion: near 1 means no spread beyond the binomial
+dispersion <- sum(residuals(fit, type = "pearson")^2) / df.residual(fit)
+dispersion
+```
+
+A dispersion of `r round(dispersion, 2)` is consistent with no variation between receivers or
+hours beyond binomial chance. It does not show that the spread of one receiver's hourly
+detection probability about the curve is 0, only that this range test gives no sign of one, so
+the model below takes the spread as 0. `de_model()` wraps the fit with that spread:
+
+```{r de-model}
+# Wrap the fitted model with a spread of 0
+model <- de_model(fit, sigma = list(station_hour = 0))
+model
+```
+
+```{r plot-range-model, fig.height = 3.4, fig.alt = "Fitted detection curves at 1 m and 25 m receiver depth over the share of transmissions heard at each distance; the curve reaches further at 25 m."}
+# Predict the fitted curve every 10 m at the two tested depths
+curves <- expand.grid(distance_m = seq(0, 1600, by = 10), depth_m = c(1, 25))
+curves$p <- plogis(model$predict(curves$distance_m, depth_m = curves$depth_m))
+# Pool the share heard at each depth and distance over hours
+pooled <- aggregate(cbind(heard, sent) ~ depth_m + distance_m,
+                    data = range_test, FUN = sum)
+# Plot the curves over the pooled shares
+ggplot(curves, aes(distance_m, p, colour = factor(depth_m))) +
+  geom_line(linewidth = 1) +
+  geom_point(data = pooled, aes(y = heard / sent), shape = 21,
+             fill = "white", size = 2.4, stroke = 1) +
+  scale_colour_viridis_d(name = "Receiver depth (m)", end = 0.7) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = "Distance (m)", y = "Detection probability per transmission") +
+  theme_positionr()
+```
+
+*The fitted model (lines) over the share of transmissions heard at each distance (open
+points), pooled over the `r length(unique(range_test$datetime[range_test$depth_m == 1]))` hours
+the test ran at each depth.*
+
+A study with tag models, changing conditions or receiver effects fits a richer model; [Range
+models: bring your own, or start from two distances](range-model.html) takes one with depth
+and date into a field for each day.
+
+## 3. Build the detection field
+
+The field needs the lake raster, with land as `NA`, and the receiver deployments:
+
+```{r read-lake}
+# Read the depth raster of the lake
+lake <- terra::rast(in_file("stoney_depth.tif"))
+# Read the receiver deployments and convert their times to UTC
+deployments <- read.csv(in_file("stoney_deployments.csv"),
+                        colClasses = serial_text)
+for (col in c("deploy_datetime", "recover_datetime")) {
+  deployments[[col]] <- as.POSIXct(deployments[[col]], tz = "UTC")
+}
+nrow(deployments)
+```
+
+`water_distances()` measures the distance through water from each receiver to each water cell,
+going round land. It reads the receiver positions from `deploy_lat` and `deploy_lon`.
+
+```{r water-distances}
+# Measure the distance through water from each receiver to each water cell
+distances <- water_distances(lake, deployments)
+distances
+```
+
+`de_field()` reads the model at each distance and at each receiver's own depth, `deploy_z`:
+
+```{r field}
+# Compute the detection probability per receiver and water cell
+field <- de_field(distances, model)
+field
+```
+
+The message counts receiver-cell pairs with land on the straight line between them, which
+the curve reads as if the line were clear (`blocked` in `?de_model`). A line that only grazes
+the corner of a land cell is clear. `plot()` maps the probability that at least one receiver
+detects a transmission from each cell:
+
+```{r plot-field, fig.height = 5.2, fig.alt = "Probability that at least one of the 70 receivers detects a transmission from each water cell of Stoney Lake: bright overlapping patches round the receivers, darker water between and beyond them."}
+# Map the field: the probability that any receiver detects a transmission
+plot(field)
+```
+
+*Probability that at least one of the `r ncol(field$p)` receivers (rings) detects one
+transmission from each of the `r format(nrow(field$p), big.mark = ",")` water cells.*
+
+## 4. Compute the hourly location surfaces
+
+The animals' detections and their tags are two more files:
+
+```{r read-detections}
+# Read the detections and convert their times to UTC
+detections <- read.csv(in_file("stoney_detections.csv"),
+                       colClasses = serial_text)
+detections$datetime <- as.POSIXct(detections$datetime, tz = "UTC")
+# Read the tags and their delays
+tags <- read.csv(in_file("stoney_tags.csv"))
+tags
+```
+
+`bin_detections()` counts, for each animal and hour with a detection, the detections at every
+receiver that was listening, the silent ones included, and the transmissions the tag sent
+(`n`, from its delay):
+
+```{r bin-detections}
+# Count detections per animal, hour and listening receiver
+counts <- bin_detections(detections, deployments, tags)
+head(counts[counts$y > 0, c("animal_id", "bin_start", "station_id", "y", "n")])
+# Count the detected hours per animal
+table(unique(counts[c("animal_id", "bin_start")])$animal_id)
+```
+
+`location_surface()` computes, for each animal and detected hour, the posterior probability
+that the animal was in each water cell. Each listening receiver's count is binomial in `n`,
+the expected number of transmissions in the hour (the hour over the tag's mean delay, rounded,
+taken as known), with the detection probability the field gives for that receiver and cell.
+The receivers' terms are multiplied and normalised over every water cell, which is a flat
+prior over water. By default a receiver-hour spread is added when the range model gives one
+above 0; the model here gives 0, so the terms are plain binomials. Each hour is computed on its
+own, as if the animal stayed in one cell for the hour, with no movement model linking hours.
+[The model](positioning.html#the-model) gives the equation, the assumptions and the published
+methods it stands beside. A surface is stored as the smallest set of cells holding 0.999 of
+its probability.
+
+```{r location-surface}
+# Compute one surface per animal and detected hour
+surface <- location_surface(counts, field)
+surface
+```
+
+The print summarises the run: cells kept per hour, hours whose counts no single cell explains
+(`Misfit`), and hours placed on a ring away from the receiver that heard most (`Near`), the
+signature of an hour heard mostly by one receiver. In the hour from 07:00 UTC on 1 June 2024,
+four receivers heard `stoney-01`. Its surface for that hour is drawn with its true path from
+the simulation:
+
+```{r one-hour}
+# Select the counts, at the receivers that heard it, from 07:00 UTC
+hour_start <- as.POSIXct("2024-06-01 07:00:00", tz = "UTC")
+hour_counts <- counts[counts$animal_id == "stoney-01" &
+                        counts$bin_start == hour_start, ]
+hour_counts[hour_counts$y > 0, c("station_id", "y", "n")]
+# Select the true path of the hour, one position a minute
+true_path <- stoney_track$track
+true_path <- true_path[true_path$animal_id == "stoney-01" &
+                         true_path$datetime >= hour_start &
+                         true_path$datetime <= hour_start + 3600, ]
+nrow(true_path)
+```
+
+```{r plot-surface, fig.height = 4.8, fig.alt = "Location surface of stoney-01 for one hour: a compact bright patch between the four receivers that heard it, with its 50% and 95% credible regions outlined and the true path running through it."}
+# Map the surface, with the true path drawn on a white edge
+plot(surface, animal_id = "stoney-01", bin_start = hour_start) +
+  geom_path(data = true_path, aes(x, y), colour = "white", linewidth = 1.6,
+            inherit.aes = FALSE) +
+  geom_path(data = true_path, aes(x, y), colour = "grey45", linewidth = 0.8,
+            inherit.aes = FALSE)
+```
+
+*Location surface of `stoney-01` for 07:00 to 08:00 UTC on 1 June 2024, with the true path of
+the hour (line, one position a minute). The surface keeps the smallest set of cells that holds
+99.9% of the hour's probability; the water cells outside it are not stored.*
+
+The surface lies where the four ranges meet, pulled away from the silent receivers round it.
+[Hourly positions against the true track](positioning.html) shows every hour of one animal
+this way and scores all five against their tracks.
+
+## 5. Summarise with credible regions and draws
+
+`credible_region()` returns each hour's smallest set of cells holding 95% of the probability,
+with its area:
+
+```{r credible-region}
+# Find the 95% region of every hour, and its area
+regions <- credible_region(surface, level = 0.95)
+region_areas <- attr(regions, "summary")
+# Compute the median area of the 95% region per animal, in ha
+aggregate(list(median_ha = region_areas$area_m2 / 1e4),
+          by = region_areas["animal_id"], FUN = function(ha) round(median(ha)))
+```
+
+`sample_locations()` draws cells from each surface in proportion to their probability, for
+analyses that take points, such as habitat selection. The draws describe the hours in which
+the animal was detected, and only those.
+
+```{r sample-locations}
+# Draw 20 cells per detected hour in proportion to probability
+draws <- sample_locations(surface, n = 20, seed = 1)
+head(draws, 3)
+attr(draws, "estimand")
+```
+
+```{r plot-draws, fig.height = 5.4, dpi = 110, fig.alt = "Map of Stoney Lake with the draws of the five animals as points, one set per animal, and each true track as a line through its draws."}
+# Turn depth to metres below the surface (the raster stores it as negative)
+depth_cells <- terra::as.data.frame(abs(lake), xy = TRUE)
+names(depth_cells)[3] <- "depth_m"
+# Warm colours, which read on the blue depth ramp, one per animal; each
+# track is a darker shade of its animal's colour, so it can be followed
+# through its own draws
+animals <- sort(unique(draws$animal_id))
+draw_colours <- setNames(c("#FF8C00", "#FF3B3B", "#FF66CC", "#FFE135",
+                           "#B3FF00"), animals)
+track_colours <- grDevices::rgb(t(grDevices::col2rgb(draw_colours)) * 0.55,
+                                maxColorValue = 255)
+names(track_colours) <- animals
+# Draw each animal's track thin, in its own dark shade
+track_layers <- lapply(animals, function(a) {
+  geom_path(data = stoney_track$track[stoney_track$track$animal_id == a, ],
+            colour = track_colours[[a]], linewidth = 0.25)
+})
+# Map the depth, the draws, the tracks over them, then the receivers
+ggplot(depth_cells, aes(x, y)) +
+  geom_raster(aes(fill = depth_m)) +
+  scale_fill_depth() +
+  geom_point(data = draws, aes(colour = animal_id), alpha = 0.6, size = 1.3,
+             stroke = 0) +
+  scale_colour_manual(name = "Animal", values = draw_colours) +
+  guides(colour = guide_legend(override.aes = list(alpha = 1, size = 2.6))) +
+  track_layers +
+  layer_receivers(attr(distances, "receivers"), size = 1.2,
+                  stroke = 0.45) +
+  coord_equal() +
+  labs(x = "Easting (m, UTM 17N)", y = "Northing (m, UTM 17N)") +
+  annotation_scale_bar(location = "br") +
+  theme_positionr()
+```
+
+*Positions of the five simulated animals over 1 and 2 June 2024: 20 cells drawn from each
+detected hour's surface (`r format(nrow(draws), big.mark = ",")` draws, many on the same cell),
+with the true tracks (lines, one position a minute) and the `r nrow(deployments)` receivers
+(rings).*
+
+Most of each animal's draws sit along its own track. The draws of single-receiver hours sit on
+arcs round the receiver that heard the animal, some of them away from the track, as in the
+north-west arm, the north-east basin and the middle basin. [Hourly positions against the true
+track](positioning.html) turns draws like these into depth use and writes them to files for
+other packages.

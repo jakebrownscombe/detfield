@@ -1,0 +1,95 @@
+
+> library(detfield)
+
+> range_test <- stoney_range_covariates
+
+> first_day <- as.Date("2024-05-22")
+
+> range_test$day <- as.numeric(as.Date(range_test$datetime) - 
++     first_day)
+
+> range_test$receiver_hour <- factor(paste(range_test$receiver_serial, 
++     format(range_test$datetime)))
+
+> range_test$receiver_serial <- factor(range_test$receiver_serial)
+
+> range_test$tag_model <- factor(range_test$tag_model)
+
+> nrow(range_test)
+[1] 6912
+
+> time_fit <- mgcv::bam(cbind(heard, sent - heard) ~ 
++     distance_m * depth_m + tag_model + s(day, k = 5) + s(receiver_serial, 
++         bs = "re" .... [TRUNCATED] 
+
+> sds <- 1/sqrt(time_fit$sp[c("s(receiver_serial)", 
++     "s(receiver_hour)")])
+
+> spread <- sqrt(sum(sds^2))
+
+> spread
+[1] 1.116859
+
+> day_of <- function(date) as.numeric(as.Date(date) - 
++     first_day)
+
+> add_levels <- function(pairs) {
++     pairs$receiver_serial <- levels(range_test$receiver_serial)[1]
++     pairs$receiver_hour <- levels(range_test$ .... [TRUNCATED] 
+
+> model_of <- function(...) {
++     de_model(time_fit, sigma = list(station_hour = spread), modulators = list(day = day_of), 
++         covariates = a .... [TRUNCATED] 
+
+> per_row <- model_of()
+
+> together <- model_of(discrete = TRUE)
+
+> lake <- terra::rast(system.file("extdata", "stoney_depth.tif", 
++     package = "detfield"))
+
+> distances <- water_distances(lake, stoney_track$receivers)
+
+> days <- as.Date(c("2024-05-22", "2024-05-24"))
+
+> diffs <- lapply(days, function(date) {
++     a <- suppressMessages(de_field(distances, per_row, tag_model = "V13-1x", 
++         date = date))
++     .... [TRUNCATED] 
+
+> res <- do.call(rbind, diffs)
+
+> print(res, digits = 3)
+        date  pairs max_abs_logit median_abs_logit pairs_p_01
+1 2024-05-22 337190         0.118           0.0528      10867
+2 2024-05-24 337190         0.118           0.0528       8349
+  max_abs_logit_p_01
+1              0.104
+2              0.101
+
+> cat(sprintf("Largest logit difference, discrete against per-row: %.3f over %s pairs a day\n", 
++     max(res$max_abs_logit), format(res$pairs[1], bi .... [TRUNCATED] 
+Largest logit difference, discrete against per-row: 0.118 over 337,190 pairs a day
+
+> sessionInfo()
+R version 4.2.1 (2022-06-23)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 15.7.7
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRblas.0.dylib
+LAPACK: /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRlapack.dylib
+
+locale:
+[1] C
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] detfield_0.1.1
+
+loaded via a namespace (and not attached):
+ [1] compiler_4.2.1   Matrix_1.6-5     tools_4.2.1      mgcv_1.9-1      
+ [5] Rcpp_1.1.2       codetools_0.2-18 splines_4.2.1    nlme_3.1-157    
+ [9] grid_4.2.1       lattice_0.20-45  terra_1.7-78    

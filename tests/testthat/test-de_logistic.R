@@ -1,0 +1,32 @@
+test_that("the curve passes through 0.5 at d50 and 0.05 at d05", {
+  m <- de_logistic(d50 = 300, d05 = 800)
+  expect_s3_class(m, "de_model")
+  expect_equal(stats::plogis(m$predict(c(300, 800))), c(0.5, 0.05))
+  expect_true(all(diff(m$predict(seq(0, 2000, by = 50))) < 0))
+  expect_identical(m$uses, "distance_m")
+  expect_true(all(is.na(unlist(m$sigma))))
+})
+
+test_that("d05 at or below d50 is refused", {
+  expect_error(de_logistic(500, 500), "`d05` must be larger than `d50`")
+  expect_error(de_logistic(500, 200), "`d05` must be larger than `d50`")
+  expect_error(de_logistic(-1, 200), "at least 0")
+  expect_error(de_logistic(100, Inf), "`d50` and `d05` must be finite")
+  expect_error(de_logistic(NA, 200), "`d50` and `d05` must be finite")
+  expect_error(de_logistic("300", 800), "`d50` and `d05` must be finite")
+  expect_error(de_logistic(c(1, 2), 800), "same length")
+  expect_error(de_logistic(c(100, 200), c(400, 500)), "Give `depth`")
+})
+
+test_that("with depth, both distances are interpolated and held at the ends", {
+  m <- de_logistic(d50 = c(200, 400), d05 = c(600, 1000), depth = c(2, 20))
+  expect_identical(m$uses, c("distance_m", "depth_m"))
+  expect_equal(stats::plogis(m$predict(c(200, 600), depth_m = 2)), c(0.5, 0.05))
+  expect_equal(stats::plogis(m$predict(c(300, 800), depth_m = 11)), c(0.5, 0.05))
+  expect_equal(m$predict(500, depth_m = 50), m$predict(500, depth_m = 20))
+  expect_equal(m$predict(500, depth_m = 0), m$predict(500, depth_m = 2))
+  expect_error(m$predict(500), "needs `depth_m`")
+  expect_error(m$predict("500", depth_m = 2), "numeric")
+  expect_error(de_logistic(c(200, 400), c(600, 1000), depth = c(20, 2)), "increasing")
+  expect_error(de_logistic(c(200, 400), c(600, 1000), depth = 2), "one per value")
+})

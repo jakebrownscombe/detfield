@@ -1,0 +1,119 @@
+
+> library(detfield)
+
+> lake <- terra::rast(system.file("extdata", "stoney_depth.tif", 
++     package = "detfield"))
+
+> rx <- stoney_track$receivers
+
+> exact <- suppressWarnings(water_distances(lake, rx))
+
+> grid <- suppressWarnings(water_distances(lake, rx, 
++     control = list(path = "grid")))
+
+> nrow(exact)
+[1] 337190
+
+> nrow(grid)
+[1] 337260
+
+> pairs <- merge(as.data.frame(exact), as.data.frame(grid), 
++     by = c("station_id", "cell"), suffixes = c("_exact", "_grid"))
+
+> nrow(pairs)
+[1] 337190
+
+> identical(pairs$in_water_exact, pairs$in_water_grid)
+[1] TRUE
+
+> clear <- pairs[pairs$in_water_exact, ]
+
+> nrow(clear)
+[1] 92798
+
+> sum(clear$distance_m_grid == clear$straight_m_grid)
+[1] 92798
+
+> sum(clear$distance_m_exact == clear$straight_m_exact)
+[1] 92798
+
+> blocked <- pairs[!pairs$in_water_exact, ]
+
+> ratio <- blocked$distance_m_grid/blocked$distance_m_exact
+
+> length(ratio)
+[1] 244392
+
+> range(ratio)
+[1] 0.6644778 1.1642765
+
+> mean(ratio)
+[1] 1.05887
+
+> stats::median(ratio)
+[1] 1.061819
+
+> sum(ratio < 0.99)
+[1] 76
+
+> sum(ratio < 0.9)
+[1] 18
+
+> sum(ratio > 1.01)
+[1] 242716
+
+> nrow(grid) - nrow(pairs)
+[1] 70
+
+> cat(sprintf("Blocked pairs: grid option over exact %.3f to %.3f, mean %.3f, over %s pairs\n", 
++     min(ratio), max(ratio), mean(ratio), format(len .... [TRUNCATED] 
+Blocked pairs: grid option over exact 0.664 to 1.164, mean 1.059, over 244,392 pairs
+
+> info <- detfield:::grid_info(lake)
+
+> cells <- attr(exact, "cells")
+
+> packed <- attr(exact, "grid")
+
+> rx_used <- attr(exact, "receivers")
+
+> xy <- terra::xyFromCell(lake, cells)
+
+> over <- unlist(lapply(seq_len(nrow(rx_used)), function(i) {
++     path <- detfield:::grid_path(packed, info, cells, rx_used$cell[i], 
++         1000 .... [TRUNCATED] 
+
+> length(over)
+[1] 92728
+
+> range(over)
+[1] 1.000000 1.082392
+
+> cat(sprintf("8-neighbour path on clear pairs: up to %.1f%% longer, mean %.1f%%, over %s pairs\n", 
++     100 * (max(over) - 1), 100 * (mean(over) -  .... [TRUNCATED] 
+8-neighbour path on clear pairs: up to 8.2% longer, mean 5.5%, over 92,728 pairs
+
+> sqrt(4 - 2 * sqrt(2))
+[1] 1.082392
+
+> sessionInfo()
+R version 4.2.1 (2022-06-23)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 15.7.7
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRblas.0.dylib
+LAPACK: /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRlapack.dylib
+
+locale:
+[1] C
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] detfield_0.1.1
+
+loaded via a namespace (and not attached):
+[1] compiler_4.2.1   tools_4.2.1      Rcpp_1.1.2       codetools_0.2-18
+[5] terra_1.7-78    

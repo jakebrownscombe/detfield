@@ -1,0 +1,49 @@
+Package: detfield
+Title: Detection Fields and Location Surfaces for Acoustic Telemetry
+Version: 0.1.1
+Authors@R:
+    person("Jacob", "Brownscombe", , "jakebrownscombe@gmail.com", role = c("aut", "cre", "cph"),
+           comment = c(ORCID = "0000-0003-2496-8764"))
+Description: Builds detection-efficiency fields for fixed acoustic receiver
+    arrays from a fitted range model and distances measured through water, and
+    turns detection counts into location surfaces: for each tagged animal and
+    time bin, the probability that the animal was in each water cell. The
+    surface for a bin is a posterior over water cells from a binomial
+    likelihood of the detection counts of every listening receiver, with the
+    spread of each receiver's detection probability within a time bin given
+    as an argument.
+    Credible regions and samples drawn from the surfaces feed habitat and
+    movement analyses.
+License: GPL (>= 3)
+URL: https://jakebrownscombe.github.io/detfield/, https://github.com/jakebrownscombe/detfield
+BugReports: https://github.com/jakebrownscombe/detfield/issues
+Depends:
+    R (>= 4.1.0)
+Imports:
+    data.table,
+    ggplot2 (>= 3.5.0),
+    grid,
+    parallel,
+    sf,
+    stats,
+    terra,
+    utils,
+    withr
+Suggests:
+    detqc,
+    glmmTMB,
+    knitr,
+    magick,
+    mgcv,
+    rmarkdown,
+    survival,
+    testthat (>= 3.1.7)
+Remotes:
+    jakebrownscombe/detqc
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Encoding: UTF-8
+LazyData: true
+Language: en-GB
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1

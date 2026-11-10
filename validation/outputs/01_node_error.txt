@@ -1,0 +1,85 @@
+
+> library(detfield)
+
+> lake <- terra::rast(system.file("extdata", "stoney_depth.tif", 
++     package = "detfield"))
+
+> truth <- stoney_track$truth
+
+> curve <- de_logistic(d50 = truth$d50, d05 = truth$d05, 
++     depth = truth$depth)
+
+> field <- de_field(water_distances(lake, stoney_track$receivers), 
++     de_model(curve, sigma = list(station_hour = 2.55)))
+194 of 7,669 receiver-cell pairs with p >= 0.05 have land on the
+  straight line between them; with blocked = 0 the curve is read on
+  them as if the line were clear. See `blocked` in ?de_model.
+
+> counts <- bin_detections(stoney_track$detections, 
++     stoney_track$receivers, stoney_track$tags)
+
+> length(field$cells)
+[1] 4818
+
+> nrow(unique(counts[c("animal_id", "bin_start")]))
+[1] 212
+
+> full <- function(nodes) {
++     suppressWarnings(location_surface(counts, field, control = list(nodes = nodes, 
++         kept_mass = 1)))
++ }
+
+> ref <- full(200)
+
+> key <- function(s) paste(s$animal_id, format(s$bin_start, 
++     "%Y-%m-%d %H:%M"), s$cell)
+
+> length(unique(paste(ref$animal_id, ref$bin_start)))
+[1] 212
+
+> tv_per_hour <- function(s) {
++     keys <- union(key(s), key(ref))
++     a <- s$prob[match(keys, key(s))]
++     b <- ref$prob[match(keys, key(ref))]
++     a[is.na(a)] <- 0
++     b[is.na(b)] <- 0
++     hour <- sub(" [0-9]+$", "", keys)
++     tapply(abs(a - b), hour, sum)/2
++ }
+
+> res <- do.call(rbind, lapply(c(1, 20, 64), function(nodes) {
++     tv <- tv_per_hour(full(nodes))
++     data.frame(nodes = nodes, animal_hours = length(tv), max_tv = max(tv), 
++         median_tv = median(tv))
++ }))
+
+> print(res, digits = 3)
+  nodes animal_hours   max_tv median_tv
+1     1          212 3.39e-02  1.36e-02
+2    20          212 1.15e-04  7.44e-05
+3    64          212 2.43e-07  1.49e-07
+
+> write.csv(res, "validation/outputs/01_node_error.csv", 
++     row.names = FALSE)
+
+> sessionInfo()
+R version 4.2.1 (2022-06-23)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 15.7.7
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRblas.0.dylib
+LAPACK: /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRlapack.dylib
+
+locale:
+[1] C
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] detfield_0.1.1
+
+loaded via a namespace (and not attached):
+[1] compiler_4.2.1      tools_4.2.1         Rcpp_1.1.2         
+[4] codetools_0.2-18    data.table_1.18.2.1 terra_1.7-78       

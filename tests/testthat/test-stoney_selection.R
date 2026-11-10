@@ -1,0 +1,31 @@
+# ---- The shipped habitat-selection study ----
+test_that("stoney_selection has the shapes and counts its help page states", {
+  s <- stoney_selection
+  expect_named(s, c("receivers", "detections", "tags", "track", "presence", "coverage", "truth",
+                    "trial", "hours"))
+  expect_identical(s$receivers, stoney_track$receivers)
+  expect_identical(nrow(s$detections), 27442L)
+  expect_true(all(s$detections$datetime < as.POSIXct("2024-06-03", tz = "UTC")))
+  expect_identical(nrow(s$tags), 40L)
+  expect_identical(as.vector(table(s$tags$beta)), c(20L, 20L))
+  expect_identical(s$tags$animal_id, sprintf("selection-%02d", 1:40))
+  expect_identical(s$tags$replicate, rep(1:20, 2))
+  expect_identical(nrow(s$track), 115240L)
+  expect_identical(as.vector(table(s$track$animal_id)), rep(2881L, 40))
+  expect_type(s$track$cell, "integer")
+  expect_identical(nrow(s$presence), 35700L)
+  expect_identical(nrow(unique(s$presence[c("animal_id", "bin_start")])), 1785L)
+  expect_identical(as.vector(table(s$presence$draw)), rep(1785L, 20))
+  expect_named(s$coverage, c("transmission", "hour"))
+  expect_identical(nrow(s$coverage$hour), 14454L)
+  expect_identical(s$coverage$hour[c("date", "cell")], s$coverage$transmission[c("date", "cell")])
+  expect_identical(nrow(s$trial), 3144L)
+  expect_setequal(unique(s$trial$block), 1:2)
+  expect_setequal(unique(s$trial$beta), c(-0.3, -0.1, 0, 0.1, 0.3))
+  expect_setequal(unique(s$trial$availability), c("weighted", "uniform_0.1", "per_transmission",
+                                                  "uniform_0.2"))
+  expect_identical(sum(s$trial$receivers == 70), 1600L)
+  expect_identical(nrow(s$hours), 8872L)
+  expect_identical(sum(s$hours$block == 1 & s$hours$beta %in% c(-0.3, 0)), 1785L)
+  expect_identical(s$truth$transmissions_per_hour, 24)
+})

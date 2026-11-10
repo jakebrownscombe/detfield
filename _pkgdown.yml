@@ -1,0 +1,142 @@
+url: https://jakebrownscombe.github.io/detfield/
+
+template:
+  bootstrap: 5
+  bootswatch: cosmo
+  bslib:
+    primary: "#2C5AA0"
+    base_font: {google: "Source Sans 3"}
+    heading_font: {google: "Source Sans 3"}
+    code_font: {google: "Source Code Pro"}
+
+home:
+  title: "detfield: hourly location surfaces for acoustic telemetry"
+  # The Links section is set here in full, so pkgdown adds none of its own
+  # (no CRAN, rdrr.io or issue links).
+  sidebar:
+    structure: [links, license, citation, authors, dev]
+    components:
+      links:
+        title: Links
+        text: >
+          [detqc](https://jakebrownscombe.github.io/detqc/),
+          [arraydesign](https://jakebrownscombe.github.io/arraydesign/) and
+          [arraydesignR](https://jakebrownscombe.github.io/arraydesignR/), the other
+          packages of positionR. The source code is at
+          github.com/jakebrownscombe/detfield.
+
+navbar:
+  structure:
+    left: [intro, articles, reference, news]
+    right: [suite, search, github]
+  components:
+    intro:
+      text: Get started
+      href: articles/detfield.html
+    suite:
+      text: positionR
+      menu:
+        - text: positionR, the suite
+          href: https://jakebrownscombe.github.io/positionR/
+        - text: detqc, read, check and filter detections
+          href: https://jakebrownscombe.github.io/detqc/
+        - text: detfield, detection fields and positions
+          href: https://jakebrownscombe.github.io/detfield/
+        - text: arraydesign, design and test tracking systems
+          href: https://jakebrownscombe.github.io/arraydesign/
+        - text: arraydesignR, arraydesign as a point-and-click application
+          href: https://jakebrownscombe.github.io/arraydesignR/
+
+articles:
+  - title: Get started
+    desc: >
+      A range test counted and fitted, the detection field built from the fitted model, and five
+      simulated Stoney Lake animals positioned by the hour, with credible regions and draws.
+    contents:
+      - detfield
+  - title: Build the field
+    navbar: Build the field
+    desc: >
+      Your own range model read into a detection field: a stand-in from two distances, a model
+      with receiver depth, and one that changes with date, with a field for each day, coverage
+      per day and what a silent receiver does.
+    contents:
+      - range-model
+  - title: Position
+    navbar: Position
+    desc: >
+      Hourly positions, 95% regions and a use map scored against the true tracks of five
+      simulated animals on 70 receivers, and the draws written to files.
+    contents:
+      - positioning
+  - title: Habitat selection
+    navbar: Habitat selection
+    desc: >
+      Depth use from position draws set against the true track of 40 animals with a known
+      preference, then presence against availability from the array's detection surface, with a
+      trial over five preferences, two arrays and two blocks of animals.
+    contents:
+      - habitat-selection
+  - title: From detqc
+    navbar: From detqc
+    desc: >
+      A detection set cleaned by detqc handed to detfield, positioned by the hour, with the
+      detected hours counted by the receivers that heard each fish.
+    contents:
+      - articles/from-detqc
+
+reference:
+  - title: Build the detection field
+    desc: >
+      Fit the detection curve to your range test, measure distances through
+      water, and give every water cell a detection probability for every
+      receiver.
+    contents:
+      - range_test_counts
+      - de_logistic
+      - de_model
+      - water_distances
+      - de_field
+      - system_de
+      - plot.de_model
+  - title: Position the animals
+    desc: >
+      Count detections per animal and hour, turn the counts into location
+      surfaces, and draw regions and samples from them.
+    contents:
+      - bin_detections
+      - location_surface
+      - credible_region
+      - sample_locations
+      - plot.loc_surface
+  - title: Used and available points
+    desc: >
+      Draw availability points from the array's detection surface, matched to the presence
+      draws, and stack used and available points with covariates for a habitat-selection model
+      of your choice.
+    contents:
+      - sample_available
+      - used_available
+  - title: Figures
+    desc: >
+      The theme, the depth and probability scales, the receiver rings and the map scale bar
+      positionR figures are drawn with.
+    contents:
+      - theme_positionr
+      - positionr_ring_colours
+      - layer_receivers
+      - annotation_scale_bar
+      - scale_fill_depth
+      - scale_fill_probability
+  - title: Example data
+    desc: >
+      The Stoney Lake study every page runs on: 70 receivers, five animals with known tracks,
+      and the range tests of its range model.
+    contents:
+      - stoney_track
+      - stoney_selection
+      - stoney_range_test
+      - stoney_range_covariates
+
+code:
+  width: 76

@@ -1,0 +1,35 @@
+[1] 39
+[1] 0.5 0.5
+  sigma   n rule_nodes max_err_rule max_err_20
+1  2.55  30         64     5.77e-07   0.000252
+2  2.55  60         64     7.41e-07   0.000287
+3  2.55 720         64     1.20e-06   0.000317
+4  3.40  30         85     4.60e-06   0.001591
+5  3.40  60         85     5.95e-06   0.001724
+6  3.40 720         85     4.58e-06   0.001817
+7  6.00  30        150     7.63e-05   0.016957
+8  6.00  60        150     9.32e-05   0.017178
+9  6.00 720        150     1.14e-04   0.018156
+  sigma rule_nodes max_err_rule max_err_20
+1  2.55         64     1.20e-06   0.000317
+2  3.40         85     5.95e-06   0.001817
+3  6.00        150     1.14e-04   0.018156
+R version 4.2.1 (2022-06-23)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 15.7.7
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRblas.0.dylib
+LAPACK: /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRlapack.dylib
+
+locale:
+[1] C
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] detfield_0.1.1
+
+loaded via a namespace (and not attached):
+[1] compiler_4.2.1

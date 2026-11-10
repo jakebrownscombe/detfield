@@ -1,0 +1,83 @@
+
+> library(detfield)
+
+> lake <- terra::rast(system.file("extdata", "stoney_depth.tif", 
++     package = "detfield"))
+
+> truth <- stoney_track$truth
+
+> curve <- de_logistic(d50 = truth$d50, d05 = truth$d05, 
++     depth = truth$depth)
+
+> field <- de_field(water_distances(lake, stoney_track$receivers), 
++     de_model(curve, sigma = list(station_hour = 2.55)))
+194 of 7,669 receiver-cell pairs with p >= 0.05 have land on the
+  straight line between them; with blocked = 0 the curve is read on
+  them as if the line were clear. See `blocked` in ?de_model.
+
+> counts <- bin_detections(stoney_track$detections, 
++     stoney_track$receivers, stoney_track$tags)
+
+> one <- counts[counts$animal_id == "stoney-01", ]
+
+> hours <- unique(one$bin_start)
+
+> length(hours)
+[1] 43
+
+> nrow(one)
+[1] 3010
+
+> invisible(location_surface(one[one$bin_start == hours[1], 
++     ], field))
+
+> runs <- 5
+
+> times <- t(vapply(seq_len(runs), function(r) {
++     c(one_hour = system.time(location_surface(one[one$bin_start == 
++         hours[1], ], field))[["elapsed"]], all_hours = system.time(location_surface(one, 
++         field))[["elapsed"]])
++ }, numeric(2)))
+
+> print(times)
+     one_hour all_hours
+[1,]    0.168     2.649
+[2,]    0.199     2.461
+[3,]    0.191     2.527
+[4,]    0.149     2.595
+[5,]    0.154     2.586
+
+> cat(sprintf("stoney-01, median of %d runs: 1 hour %.2f s, %d hours %.2f s\n", 
++     runs, stats::median(times[, "one_hour"]), length(hours), 
++     stats::median(times[, "all_hours"])))
+stoney-01, median of 5 runs: 1 hour 0.17 s, 43 hours 2.59 s
+
+> parallel::detectCores()
+[1] 16
+
+> if (nzchar(Sys.which("uptime"))) system("uptime", 
++     intern = TRUE)
+[1] "18:43  up 36 days, 22:12, 1 user, load averages: 7.32 7.57 7.00"
+
+> sessionInfo()
+R version 4.2.1 (2022-06-23)
+Platform: aarch64-apple-darwin20 (64-bit)
+Running under: macOS 15.7.7
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRblas.0.dylib
+LAPACK: /Library/Frameworks/R.framework/Versions/4.2-arm64/Resources/lib/libRlapack.dylib
+
+locale:
+[1] C
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] detfield_0.1.1
+
+loaded via a namespace (and not attached):
+[1] compiler_4.2.1      parallel_4.2.1      tools_4.2.1        
+[4] Rcpp_1.1.2          codetools_0.2-18    data.table_1.18.2.1
+[7] terra_1.7-78       
