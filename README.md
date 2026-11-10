@@ -109,14 +109,7 @@ Lake.
 
 **detqc** exports the same five figure functions as **detfield**. The
 copies are identical, so the masking message R prints when both packages
-are attached can be ignored. Every map in the suite draws a receiver in
-the three ring colours:
-
-``` r
-positionr_ring_colours()
-#>     heard    silent      edge 
-#> "#FDE725" "#FFFFFF" "#1A1A1A"
-```
+are attached can be ignored.
 
 ## Cite
 

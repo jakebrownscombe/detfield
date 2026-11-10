@@ -111,12 +111,7 @@ range model and one lake for their examples, Stoney Lake.
 - [**arraydesignR**](https://jakebrownscombe.github.io/arraydesignR/): **arraydesign** as a point-and-click application.
 
 **detqc** exports the same five figure functions as **detfield**. The copies are identical, so
-the masking message R prints when both packages are attached can be ignored. Every map in the
-suite draws a receiver in the three ring colours:
-
-```{r ring-colours}
-positionr_ring_colours()
-```
+the masking message R prints when both packages are attached can be ignored.
 
 ## Cite
 

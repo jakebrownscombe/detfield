@@ -269,32 +269,6 @@ One receiver's count says how far from it the animal probably was and nothing ab
 direction, so the surface spreads round that receiver as far as the silent receivers beyond it
 allow.
 
-## Two errors at the hand-off
-
-**The animals table has no delays.** Without `min_delay` and `max_delay`,
-`as_detfield_input()` says so and returns no tag delays, and `bin_detections()` stops:
-
-```{r no-delays}
-# Drop the delay columns from the animals table, and hand off again
-no_delays <- dets
-no_delays$animals <- dets$animals[, setdiff(names(dets$animals),
-                                            c("min_delay", "max_delay"))]
-try(do.call(bin_detections, detqc::as_detfield_input(no_delays)))
-```
-
-Read the tag specification sheet with `detqc::read_tag_specs()` and pass it to
-`detqc::read_animals()`, or give the delay to `bin_detections()` as `tag_delay = c(120, 180)`.
-
-**The listening table is not a deployments table.** `detfield_input$listening` is a list of
-two tables and has no positions, so `water_distances()` stops:
-
-```{r listening-not-deployments}
-# Try the listening table in place of the deployments
-try(water_distances(lake, detfield_input$listening))
-```
-
-Give `water_distances()` the deployments of the detection set, `dets$deployments`, as above.
-
 ## Next
 
 - [Fish positioning with detection range information](detfield.html): the whole chain on the

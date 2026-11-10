@@ -147,14 +147,3 @@ plot(surface, animal_id = "stoney-01", bin_start = one_hour,
             inherit.aes = FALSE) +
   geom_path(data = one_path, aes(x, y), colour = "grey45", linewidth = 0.5,
             inherit.aes = FALSE)
-
-# ---- No delays ----
-# Drop the delay columns from the animals table, and hand off again
-no_delays <- dets
-no_delays$animals <- dets$animals[, setdiff(names(dets$animals),
-                                            c("min_delay", "max_delay"))]
-try(do.call(bin_detections, detqc::as_detfield_input(no_delays)))
-
-# ---- Listening not deployments ----
-# Try the listening table in place of the deployments
-try(water_distances(lake, detfield_input$listening))
